@@ -6,10 +6,10 @@ meta_data = ["Time", "PM25", "PM10"]
 
 file = open("air_quality_data.csv", "w", newline = '')
 
-data_writer = CSV.writer(file)
-data_writerow(meta_data)
+data_writer = csv.writer(file)
+data_writer.writerow(meta_data)
 
-while True:
+#while True:
     #get the data and get the timestamp
     # ex. data = pm25.get_data()
 
@@ -20,4 +20,3 @@ while True:
 
     #wait an amount of seconds
     #time.sleep(2)
-
