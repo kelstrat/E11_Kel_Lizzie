@@ -31,6 +31,10 @@ dwriter.writerow(metadata)
 #bme680 Pressure, temp, gas, etc. sensor
 i2c = board.I2C()   # uses board.SCL and board.SDA
 bme680 = adafruit_bme680.Adafruit_BME680_I2C(i2c)
+#setting location sea level pressure (hPa)
+bme680.sea_level_pressure = 1013.25
+
+
 
 #pm25 Air Quality Sensor
 reset_pin = None
@@ -46,8 +50,9 @@ while ((now - start_time) < run_time):
     now = time.time()
 
     #air quality data
+    aqdata = pm25.read()
     pm10 = aqdata["pm10 standard"]
-    pm25 = aqdata["pm25 standard"]
+    pm25_data = aqdata["pm25 standard"]
     pm100 = aqdata["pm100 standard"]
 
     #PTH data
@@ -58,7 +63,7 @@ while ((now - start_time) < run_time):
     altitude = round(bme680.altitude, 2)
 
     #put into a single line of data to put into the CSV file
-    datalist = [now, pm10, pm25, pm100, temp, gas, humidity, pressure, altitude]
+    datalist = [now, pm10, pm25_data, pm100, temp, gas, humidity, pressure, altitude]
 
     #write into CSV
     dwriter.writerow(datalist)
