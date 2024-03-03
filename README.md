@@ -11,7 +11,7 @@ Lab Week 4: () KelLab4.py
 
 Lab Week 5: (Collecting all data and analyzing) insidedata.csv, outsidedata.csv, Lab 5 Data Analysis.ipynb
 
-Lab Week 6: (Comparing with others, new data) lab4inside.csv, lab4outside.csv, smokedata.csv
+Lab Week 6: (Comparing with others, new data) lab4inside.csv, lab4outside.csv, smokedata.csv, Lab6-Activity-Week-6-Kel-Lizzie.ipynb
 
 Lab Week 7: (Introduction to circuits online) No files
 
