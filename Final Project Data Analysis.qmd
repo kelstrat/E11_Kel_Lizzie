@@ -1,0 +1,396 @@
+---
+title: "Final Project"
+author: "Kel Strathearn"
+format: html
+editor: visual
+---
+
+# Final Project
+
+```{r setup, include=FALSE}
+library(tidyverse)    # data wrangling and graphics
+library(lubridate)    # for working with dates
+library(sf)           # for working with geospatial vector-data
+library(leaflet)      # web interactive maps
+library(plotly)       # web interactive graphics
+```
+
+## Reading In Data, Cleaning, and Organizing
+
+Import the csv's from in your home directory
+
+```{r include=FALSE}
+#Import data
+hearst = read_csv(
+  file = "hearst_mining_circle.csv")
+
+jacobs = read_csv(
+  file = "outside_jacobs_hall.csv")
+
+indian = read_csv(
+  file = "indian_rock_park.csv")
+
+mortar = read_csv(
+  file = "mortar_rock_park.csv")
+
+names(hearst)
+```
+
+Add the recorded latitude and longitude for each location. We didn't move so one value is fine. Make sure to call these columns lat and lng so the graphing functions can automatically detect them. Drop the Latitude and Longitude columns.
+
+```{r}
+#For each table give its location data
+hearst = hearst |> mutate(lat = 37.873708, lng = -122.257209, Latitude = NULL, Longitude = NULL)
+
+jacobs = jacobs |> mutate(lat = 37.875914, lng = -122.258646, Latitude = NULL, Longitude = NULL)
+
+indian = indian |> mutate(lat = 37.892139, lng = -122.273156, Latitude = NULL, Longitude = NULL)
+
+mortar = mortar |> mutate(lat = 37.8932473, lng = -122.2727689, Latitude = NULL, Longitude = NULL)
+```
+
+Find the minimum length and slice all tables to be the same length.
+
+Calculate a variable, `ELAPSED_TIME` to find how many seconds we recorded for. This will be used in later standard deviation calculations.
+
+```{r}
+#slice to create equal lengths
+min_length = min(nrow(hearst),nrow(jacobs),nrow(indian),nrow(mortar))
+
+hearst = hearst |> slice(1:min_length)
+
+jacobs = jacobs |> slice(1:min_length)
+
+indian = indian |> slice(1:min_length)
+
+mortar = mortar |> slice(1:min_length)
+
+ELAPSED_TIME = as.numeric(mortar |> summarize(max(Time) - min(Time)))
+ELAPSED_TIME = round(ELAPSED_TIME)
+ELAPSED_TIME
+```
+
+Rename the time column to `Unix_Time` and create a new column `Time` to go from 0 to ELAPSED_TIME seconds. This is for more neat graphing.
+
+```{r}
+#Add a time variable just based on seconds (data is taken every 2 seconds) and rename unix time
+names(hearst)[names(hearst) == 'Time'] <- 'Unix_Time'
+names(jacobs)[names(jacobs) == 'Time'] <- 'Unix_Time'
+names(indian)[names(indian) == 'Time'] <- 'Unix_Time'
+names(mortar)[names(mortar) == 'Time'] <- 'Unix_Time'
+
+hearst = hearst |> 
+  mutate(Time = seq(from = 0, by = 2, length.out = min_length))
+
+jacobs = jacobs |>
+  mutate(Time = seq(from = 0, by = 2, length.out = min_length))
+
+indian = indian |>
+  mutate(Time = seq(from = 0, by = 2, length.out = min_length))
+
+mortar = mortar |> 
+  mutate(Time = seq(from = 0, by = 2, length.out = min_length))
+
+jacobs
+```
+
+Add a location name, `Location`, to each table. This will be useful to keep track of what data is from what location once we combine the tables.
+
+```{r}
+#add a location name
+hearst = hearst |> 
+  mutate(Location = "Hearst")
+
+jacobs = jacobs |>
+  mutate(Location = "Jacobs Hall")
+
+indian = indian |>
+  mutate(Location = "Indian Rock Park")
+
+mortar = mortar |> 
+  mutate(Location = "Mortar Rock Park")
+  
+jacobs  
+```
+
+Combine the tables into one for easier manipulation and graphing. Also I rename `counts` to be `Counts` just to match the rest of the columns.
+
+```{r}
+#Join the tables
+dat = bind_rows(hearst, jacobs, indian, mortar)
+dat = dat |> select(Time, Location, 2:12, Unix_Time) #reordering columns
+names(dat)[names(dat) == 'counts'] <- 'Counts' #renaming counts to be capitalized
+
+dat
+```
+
+### Other data over time
+
+```{r}
+#temperature humidity and pressure
+other_dat = dat |>
+  select()
+
+```
+
+```{r}
+#temperature, humidity,pressure, and altitude
+ggplot(dat, aes(x = Time, y = Temperature, color = Location)) +
+  geom_line() + 
+  theme_minimal() +
+  labs(title = "Temperature Over Time",
+       x = "Time (s)",
+       y = "Temp (C)",
+       ) +
+  scale_color_manual(
+      values = c("royalblue", "skyblue", "gold", "orange"),
+      limits = c("Hearst", "Jacobs Hall", "Indian Rock Park", "Mortar Rock Park"),
+      name = "Location", labels = c("Hearst", "Jacobs", "Indian Rock", "Mortar Rock"))
+ggsave("Temperature.png")
+```
+
+```{r}
+ggplot(dat, aes(x = Time, y = Humidity, color = Location)) +
+  geom_line() + 
+  theme_minimal() +
+  labs(title = "Humidity Over Time",
+       x = "Time (s)",
+       y = "Humidity (%)",
+       ) +
+  scale_color_manual(
+      values = c("royalblue", "skyblue", "gold", "orange"),
+      limits = c("Hearst", "Jacobs Hall", "Indian Rock Park", "Mortar Rock Park"),
+      name = "Location", labels = c("Hearst", "Jacobs", "Indian Rock", "Mortar Rock"))
+ggsave("Humidity.png")
+```
+
+```{r}
+ggplot(dat, aes(x = Time, y = Pressure, color = Location)) +
+  geom_line() + 
+  theme_minimal() +
+  labs(title = "Pressure Over Time",
+       x = "Time (s)",
+       y = "Pressure (hPa)",
+       ) +
+  scale_color_manual(
+      values = c("royalblue", "skyblue", "gold", "orange"),
+      limits = c("Hearst", "Jacobs Hall", "Indian Rock Park", "Mortar Rock Park"),
+      name = "Location", labels = c("Hearst", "Jacobs", "Indian Rock", "Mortar Rock"))
+ggsave("Pressure.png")
+```
+
+```{r}
+ggplot(dat, aes(x = Time, y = Altitude, color = Location)) +
+  geom_line() + 
+  theme_minimal() +
+  labs(title = "Altitude Over Time",
+       x = "Time (s)",
+       y = "Altitude (m)",
+       ) +
+  scale_color_manual(
+      values = c("royalblue", "skyblue", "gold", "orange"),
+      limits = c("Hearst", "Jacobs Hall", "Indian Rock Park", "Mortar Rock Park"),
+      name = "Location", labels = c("Hearst", "Jacobs", "Indian Rock", "Mortar Rock"))
+ggsave("Altitude.png")
+```
+
+### Altitude histogram
+
+```{r}
+alt_stat = dat |>
+  group_by(Location) |>
+  summarize(Mean_alt = mean(Altitude))
+
+alt_stat
+```
+
+### Air quality histogram
+
+```{r}
+airquality = dat |> 
+  select(Time, PM1, PM25, PM10, Location) |>
+  pivot_longer(cols = c(PM1, PM25,PM10),
+    names_to = c("Size"),
+    values_to = c("Concentration"))
+
+airquality
+
+aq_stat = airquality |>
+  group_by(Location, Size) |>
+  summarize(Mean = mean(Concentration))
+
+aq_stat
+```
+
+```{r}
+
+
+dat |>
+  ggplot(aes(x = PM1, fill = Location)) +
+  geom_histogram(position = "dodge", binwidth = 1) + 
+  theme_minimal() +
+  labs(title = "PM1 Frequencies",
+       x = "mu_g/m^3",
+       y = "Frequency") +
+  scale_fill_manual(
+      values = c("royalblue", "skyblue", "gold", "orange"),
+      limits = c("Hearst", "Jacobs Hall", "Indian Rock Park", "Mortar Rock Park"),
+      name = "Location", labels = c("Hearst", "Jacobs", "Indian Rock", "Mortar Rock"))
+  
+#ggsave("CountsHistogram_text.png")
+```
+
+## Graphing Radiation Over Time for Each Location
+
+```{r}
+#use the time column to graph Counts over time, coloring by location
+ggplot(dat, aes(x = Time, y = Counts/2, color = Location)) +
+  geom_line() + 
+  theme_minimal() +
+  labs(title = "Counts Over Time",
+       x = "Time (s)",
+       y = "CPS",
+       ) +
+  scale_color_manual(
+      values = c("royalblue", "skyblue", "gold", "orange"),
+      limits = c("Hearst", "Jacobs Hall", "Indian Rock Park", "Mortar Rock Park"),
+      name = "Location", labels = c("Hearst", "Jacobs", "Indian Rock", "Mortar Rock"))
+ggsave("CountsTime.png")
+```
+
+## Summarizing Table of Standard Deviations & Means
+
+```{r}
+stat_dat = dat |>
+  group_by(Location) |>
+  summarize(Mean = mean(Counts),
+            Std_true = sqrt(Mean),
+            Std_measured = sd(Counts),
+            Std_mean = Std_measured / sqrt((ELAPSED_TIME/2)), #samples = time sampled for div by seconds per sample: 2
+            Std_std = sqrt(Mean) / sqrt(2 * sqrt(ELAPSED_TIME/2)),
+            Mean_cps = mean(Counts/2)
+            )
+
+stat_dat
+```
+
+## Histogram of Radiation for Each Location
+
+-   divide by total seconds to get count rate
+
+```{r}
+ggplot(dat, aes(x = Counts/2, fill = Location)) +
+  geom_bar() + 
+  theme_minimal() +
+  labs(title = "Count Frequencies",
+       x = "CPS",
+       y = "Frequency",
+       ) +
+  scale_fill_manual(
+      values = c("royalblue", "skyblue", "gold", "orange"),
+      limits = c("Hearst", "Jacobs Hall", "Indian Rock Park", "Mortar Rock Park"),
+      name = "Location", labels = c("Hearst", "Jacobs", "Indian Rock", "Mortar Rock")) +
+  geom_vline(data = stat_dat, mapping = aes(xintercept = Mean_cps), color = "black", linetype = "dotted") +
+  geom_text(data = stat_dat,
+            mapping = aes(x = Mean_cps-1.8, 
+                          y = 20, 
+                          label = paste(round(Mean_cps, 2), "CPS", sep = " ")),
+            size = 3.4,
+            angle = 90)
+  
+ggsave("CountsHistogram_text.png")
+```
+
+### Are peaks statistically different from one another?
+
+```{r}
+means = stat_dat |> pull(Mean)
+stds = stat_dat |> pull(Std_mean)
+
+hearst_jacobs_diff = means[1] - means[3]
+hj_away = hearst_jacobs_diff/stds[1]
+hj_away
+
+hi = means[2] - means[1]
+hi_away = hi/stds[2]
+hi_away
+```
+
+All of them are more than 3 standard deviations away from one another.
+
+### Are means statistically different from the average of control groups?
+
+```{r}
+#Hearst:1, Indian:2, Jacobs:3, Mortar:4
+avg_mean = (means[1] + means[3])/2
+avg_std = sqrt(stds[1]^2 + stds[3]^2)
+print(paste(avg_mean, "plus minus", avg_std, sep = " "))
+
+#indian rock
+i_diff = means[2] - avg_mean
+
+i_apart = i_diff/stds[2]
+print(i_apart)
+
+#mortar rock
+m_diff = means[4] - avg_mean
+m_apart = m_diff/stds[4]
+print(m_apart)
+```
+
+## Map of Mean Radiation Levels at Each Location
+
+```{r}
+map_dat = dat |>
+ mutate(Color = case_when(
+         Location == "Hearst" ~ "royalblue",
+         Location == "Jacobs Hall" ~ "skyblue",
+         Location == "Mortar Rock Park" ~ "orange",
+         Location == "Indian Rock Park" ~ "gold"
+       )) |>
+  group_by(Location) |>
+  summarize(Mean = mean(Counts/2), lng = first(lng), lat = first(lat), Color = first(Color)) |>
+  mutate(Label = paste0(Location, ": ", round(Mean,2), " CPS"))
+
+map_dat
+```
+
+```{r}
+map_dat |>
+  leaflet() |>
+    addProviderTiles(providers$"Stadia.AlidadeSmooth") |>
+    setView(lng = -122.266575, lat = 37.884072, zoom = 14.2) |>
+    addCircles(lng = ~lng,
+             lat = ~lat,
+             color = ~Color,
+              opacity = 0.8,
+              weight = ~Mean,
+              label = ~Label) |>
+    addLabelOnlyMarkers(lat = ~lat-0.001, label =  ~Label, 
+                      labelOptions = labelOptions(noHide = T, direction = 'top', textOnly = T))
+```
+
+```{r}
+map_dat |>
+  slice(2, 4) |>
+  leaflet() |>
+    addProviderTiles(providers$"Stadia.AlidadeSmooth") |>
+    setView(lng = -122.266575, lat = 37.884072, zoom = 14.2) |>
+    addMarkers() |>
+    addLabelOnlyMarkers(lat = ~lat+0.003, label =  ~Location, 
+                      labelOptions = labelOptions(noHide = T, direction = 'top', textOnly = T))
+```
+
+# Analyze Spectrum?
+
+-   compare visually
+
+-   normalize y axis to activity, subtract rate
+
+-   plot on log scale, divide y axis by length of time spectrum was running
+
+-   subtract them from eachother
+
+-   peaks above background, uranium doesnt have great background spectrum, check isotope browser for U-238
+
+-   10% at 83keV, check what that could be coming
